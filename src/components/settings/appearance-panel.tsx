@@ -1,12 +1,14 @@
 "use client";
 
-import { Check, Moon, Palette, SunMoon, Sun } from "lucide-react";
+import { Check, Globe, Moon, Palette, SunMoon, Sun } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
 import { MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { SettingsPanelHead } from "./settings-panel-head";
+import { useTransition } from "react";
+import { setUserLocale } from "@/actions/locale";
 
 /**
  * Appearance panel — light/dark mode + accent-color picker.
@@ -23,6 +25,16 @@ import { SettingsPanelHead } from "./settings-panel-head";
 export function AppearancePanel() {
   const { theme, setTheme, mode, setMode } = useTheme();
   const t = useTranslations("Settings.appearance");
+  const tSettings = useTranslations("Settings");
+
+  const locale = useLocale();
+  const [isPending, startTransition] = useTransition();
+
+  const handleLanguageChange = (newLanguage: string) => {
+    startTransition(() => {
+      setUserLocale(newLanguage);
+    });
+  };
 
   return (
     <section className="max-w-3xl animate-in fade-in-50 duration-200">
@@ -31,6 +43,7 @@ export function AppearancePanel() {
         description={t("description")}
       />
 
+      {/* Parte original de modo e tema */}
       <div className="space-y-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <SunMoon className="size-4 text-muted-foreground" />
@@ -73,7 +86,68 @@ export function AppearancePanel() {
           ))}
         </div>
       </div>
+
+      {/* Nova parte para idioma */}
+      <div className="mt-8 space-y-4">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Globe className="size-4 text-muted-foreground" />
+          {tSettings("language")}
+        </h3>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <LanguageOption
+            value="en"
+            label={tSettings("english")}
+            isActive={locale === 'en'}
+            onChange={handleLanguageChange}
+          />
+          <LanguageOption
+            value="pt"
+            label={tSettings("portuguese")}
+            isActive={locale === 'pt'}
+            onChange={handleLanguageChange}
+          />
+        </div>
+      </div>
     </section>
+  );
+}
+
+// Componente de opcão de idioma
+function LanguageOption({
+  value,
+  label,
+  isActive,
+  onChange
+}: {
+  value: string;
+  label: string;
+  isActive: boolean;
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations("Settings");
+
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(value)}
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-lg border bg-card p-4 text-center transition-colors",
+        isActive
+          ? "border-primary/60 ring-2 ring-primary/40"
+          : "border-border hover:border-border hover:bg-muted/40",
+      )}
+    >
+      <span className="text-sm font-semibold text-foreground">
+        {label}
+      </span>
+      {isActive && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
+          <Check className="h-3 w-3" />
+          {t("active")}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -138,12 +212,15 @@ function ThemeCard({
   onPick: () => void;
 }) {
   const t = useTranslations("Settings.appearance");
+  const translatedName = t(`themes.${id}.name`) || name;
+  const translatedTagline = t(`themes.${id}.tagline`) || tagline;
+
   return (
     <button
       type="button"
       onClick={onPick}
       aria-pressed={isActive}
-      aria-label={t("useTheme", { name })}
+      aria-label={t("useTheme", { name: translatedName })}
       className={cn(
         "flex flex-col gap-3 rounded-lg border bg-card p-4 text-left transition-colors",
         isActive
@@ -168,9 +245,9 @@ function ThemeCard({
         )}
       </div>
       <div>
-        <div className="text-sm font-semibold text-foreground">{name}</div>
+        <div className="text-sm font-semibold text-foreground">{translatedName}</div>
         <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          {tagline}
+          {translatedTagline}
         </div>
       </div>
       <div
